@@ -94,10 +94,9 @@ const Upload = (props) => {
         const formData = new FormData(form);
 
         // Check for changes and ask if they want to be overriden
-        if (Object.keys(changed).length) {
-            if (!window.confirm("You have changes made to the current hotkeys.  Loading from new files will erase all changes.")) {
-                return;
-            }
+        if (Object.keys(changed).length !== 0 &&
+            !window.confirm("You have changes made to the current hotkeys.  Loading from new files will erase all changes.")) {
+            return;
         }
 
         axios({
@@ -136,10 +135,9 @@ const Upload = (props) => {
     const _getDefaultFiles = (event) => {
         event.preventDefault();
         // Check for changes and ask if they want to be overriden
-        if (Object.keys(changed).length) {
-            if (!window.confirm("You have changes made to the current hotkeys.  Loading the default hotkeys will erase all changes.")) {
-                return;
-            }
+        if (Object.keys(changed).length !== 0 &&
+            !window.confirm("You have changes made to the current hotkeys.  Loading the default hotkeys will erase all changes.")) {
+            return;
         }
         axios({
             method: 'get',
@@ -404,23 +402,25 @@ const Upload = (props) => {
 
     // Handles the actions of the cancel/confirm buttons
     const handleButtons = (event) => {
-        if (settingKeybind) {
-            if (event.target.value === "clear") {
-                clearHighlightedKeys(Utils.bufferToHighlights(buffer, ["keybind-row-setting-button", "keybind-row-hover-button"]),
-                                     true);
-                setBuffer(confirmKeybinds(buffer, 0));
-            }
-            else if (event.target.value === "cancel") {
-                clearHighlightedKeys(Utils.bufferToHighlights(buffer, ["keybind-row-setting-button", "keybind-row-hover-button"]),
-                                     true);
-                setSettingKeybind(false);
-                setBuffer({});
-            }
-            else if (event.target.value === "confirm") {
-                setBuffer(confirmKeybinds(buffer));
-            }
-            disableButtons(true);
+        if (!settingKeybind) {
+            return;
         }
+
+        if (event.target.value === "clear") {
+            clearHighlightedKeys(Utils.bufferToHighlights(buffer, ["keybind-row-setting-button", "keybind-row-hover-button"]),
+                true);
+            setBuffer(confirmKeybinds(buffer, 0));
+        }
+        else if (event.target.value === "cancel") {
+            clearHighlightedKeys(Utils.bufferToHighlights(buffer, ["keybind-row-setting-button", "keybind-row-hover-button"]),
+                true);
+            setSettingKeybind(false);
+            setBuffer({});
+        }
+        else if (event.target.value === "confirm") {
+            setBuffer(confirmKeybinds(buffer));
+        }
+        disableButtons(true);
     }
 
     // If inputData is null, all highlighted keys will be cleared.
@@ -512,14 +512,15 @@ const Upload = (props) => {
                 });
 
                 // Also update highlighted if we didn't clear so we only iterate once
-                if (!clear) {
-                    if (Object.keys(current).includes(uuid)) {
-                        // todo: avoid the triple spread
-                        current[uuid] = [...new Set([...classesArray, ...current[uuid]])]
-                    }
-                    else {
-                        current[uuid] = [...classesArray];
-                    }
+                if (clear) {
+                    continue;
+                }
+                if (Object.keys(current).includes(uuid)) {
+                    // todo: avoid the triple spread
+                    current[uuid] = [...new Set([...classesArray, ...current[uuid]])]
+                }
+                else {
+                    current[uuid] = [...classesArray];
                 }
             }
 
@@ -700,31 +701,33 @@ const Upload = (props) => {
     }
 
     const onSearchInput = (event) => {
-        if (dataLoadedRef.current) {
-            let searchText = event.target.value.toLowerCase();
-            if (searchText === "") {
-                setSearchFilter(null);
-                return;
-            }
-
-            let foundUUIDs = Utils.objectFilter(data.hotkeys, ([, hotkey]) => {
-                return hotkey["string_text"].toLowerCase().includes(searchText);
-            });
-            let foundMenus = Utils.objectFilter(data.groups, ([group, UUIDs]) => {
-                return group.toLowerCase().includes(searchText)
-            })
-
-            for (let [, UUIDs] of Object.entries(foundMenus)) {
-                UUIDs.filter((UUID) => {
-                    return !foundUUIDs.hasOwnProperty(UUID);
-                })
-                UUIDs.forEach((UUID) => {
-                    foundUUIDs[UUID] = data.hotkeys[UUID]
-                })
-            }
-
-            setSearchFilter(Object.keys(foundUUIDs));
+        if (!dataLoadedRef.current) {
+            return;
         }
+
+        let searchText = event.target.value.toLowerCase();
+        if (searchText === "") {
+            setSearchFilter(null);
+            return;
+        }
+
+        let foundUUIDs = Utils.objectFilter(data.hotkeys, ([, hotkey]) => {
+            return hotkey["string_text"].toLowerCase().includes(searchText);
+        });
+        let foundMenus = Utils.objectFilter(data.groups, ([group, UUIDs]) => {
+            return group.toLowerCase().includes(searchText)
+        })
+
+        for (let [, UUIDs] of Object.entries(foundMenus)) {
+            UUIDs.filter((UUID) => {
+                return !foundUUIDs.hasOwnProperty(UUID);
+            })
+            UUIDs.forEach((UUID) => {
+                foundUUIDs[UUID] = data.hotkeys[UUID]
+            })
+        }
+
+        setSearchFilter(Object.keys(foundUUIDs));
     }
 
     const toggleFavorite = (event) => {
